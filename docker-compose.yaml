@@ -1,0 +1,24 @@
+services:
+  custom-v100:
+    image: custom-v100:py310-cu126
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAX_JOBS: 8
+        # TORCH_CUDA_ARCH_LIST: "7.0 8.0 8.6 8.9 9.0"
+        # CUDAARCHS: "70;80;86;89;90"
+
+    gpus: all
+    ipc: host
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - type: bind
+        source: ${HOME}/.cache/torch
+        target: /root/.cache/torch
+      - type: bind
+        source: ${HOME}/.cache/huggingface
+        target: /root/.cache/huggingface
