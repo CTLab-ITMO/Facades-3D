@@ -24,18 +24,18 @@ os.environ["SPCONV_ALGO"] = ENVIRONMENT_CONFIG.spconv_algorithm
 import numpy as np
 import torch
 import trimesh
-from diffusers import ControlNetModel, DPMSolverMultistepScheduler, StableDiffusionControlNetPipeline
-from PIL import Image, ImageStat
+from PIL import Image
 from trimesh.visual.texture import TextureVisuals
 
 from facade_semantic_map_gen_v2 import render_facade_segmentation
 from request_control import raise_if_cancelled
 
 
-SKIP_MODEL_LOAD = False
 MODEL_CONFIG = DEFAULT_MODEL_CONFIG
 
-if not SKIP_MODEL_LOAD:
+if not os.getenv("SKIP_MODEL_LOAD"):
+    from diffusers import ControlNetModel, DPMSolverMultistepScheduler, StableDiffusionControlNetPipeline
+
     controlnet = ControlNetModel.from_pretrained(
         MODEL_CONFIG.controlnet_id,
         torch_dtype=torch.float16,
@@ -58,7 +58,7 @@ if not SKIP_MODEL_LOAD:
         weight_name=MODEL_CONFIG.ip_adapter_weight_name,
     )
 
-if not SKIP_MODEL_LOAD:
+if not os.getenv("SKIP_MODEL_LOAD"):
     from trellis_image_to_facade import TrellisImageToFacadePipeline
     from trellis.utils import postprocessing_utils
 
@@ -191,7 +191,6 @@ def add_borders_to_image(
 def gen_wall_model(
     image: Image.Image,
     semantic_map: Image.Image,
-    mean_color: list[int],
     seed: int | None = None,
     config: GenerationParametersConfig | None = None,
     cancel_event: Event | None = None,
@@ -233,10 +232,6 @@ def gen_wall_model(
             pipeline.cpu()
 
 
-def _get_mean_color(image: Image.Image) -> list[int]:
-    return [int(channel + 0.5) for channel in ImageStat.Stat(image.convert("RGB")).mean]
-
-
 def _is_power_of_two(value: int) -> bool:
     return value > 0 and (value & (value - 1)) == 0
 
@@ -269,7 +264,7 @@ def _generate_wall_mesh(
     file_stem: str,
     width: float,
     height: float,
-    visual_path: str | Path,
+    visual_path: str | Path | None,
     style_ref: Image.Image | None,
     style_ref_scale: float,
     pixels_per_meter: float,
@@ -279,7 +274,7 @@ def _generate_wall_mesh(
 ) -> trimesh.Trimesh:
     config = config or DEFAULT_GENERATION_CONFIG
     raise_if_cancelled(cancel_event)
-    visual_path = Path(visual_path)
+    resolved_visual_path = Path(visual_path) if visual_path is not None else None
     width_px = int(width * pixels_per_meter + 0.5)
     height_px = int(height * pixels_per_meter + 0.5)
     semantic_map = render_facade_segmentation(
@@ -288,7 +283,8 @@ def _generate_wall_mesh(
         pixels_per_meter=pixels_per_meter,
         seed=seed,
     )
-    semantic_map.save(visual_path / f"{file_stem}-sm.png")
+    if resolved_visual_path is not None:
+        semantic_map.save(resolved_visual_path / f"{file_stem}-sm.png")
 
     image = gen_wall_image(
         semantic_map,
@@ -301,14 +297,17 @@ def _generate_wall_mesh(
         cancel_event=cancel_event,
     )
     raise_if_cancelled(cancel_event)
-    image.save(visual_path / f"{file_stem}.png")
-    mean_color = _get_mean_color(image)
+    if resolved_visual_path is not None:
+        image.save(resolved_visual_path / f"{file_stem}.png")
 
-    pipeline.coords_dump_name = str(visual_path / f"{file_stem}-ss.npy")
+    pipeline.coords_dump_name = (
+        str(resolved_visual_path / f"{file_stem}-ss.npy")
+        if resolved_visual_path is not None
+        else None
+    )
     mesh = gen_wall_model(
         add_borders_to_image(image, border_size=config.border_size),
         semantic_map,
-        mean_color,
         seed=seed,
         config=config,
         cancel_event=cancel_event,
@@ -323,61 +322,11 @@ def _generate_wall_mesh(
     return mesh
 
 
-def gen_wall(
-    building_name: str,
-    wall_idx: int,
-    vertices: np.ndarray,
-    visual_path: str | Path,
-    style_ref: Image.Image | None,
-    style_ref_scale: float,
-    px_per_meter: float | None = None,
-    w: float | None = None,
-    h: float | None = None,
-    seed: int | None = None,
-    config: GenerationParametersConfig | None = None,
-    cancel_event: Event | None = None,
-) -> tuple[trimesh.Trimesh, trimesh.Trimesh]:
-    width = cast(float, w)
-    height = cast(float, h)
-    pixels_per_meter = cast(float, px_per_meter)
-    mesh = _generate_wall_mesh(
-        f"{building_name}-{wall_idx}",
-        width,
-        height,
-        visual_path,
-        style_ref,
-        style_ref_scale,
-        pixels_per_meter,
-        seed=seed,
-        config=config,
-        cancel_event=cancel_event,
-    )
-    raise_if_cancelled(cancel_event)
-    plane = create_plane_from_4_points(vertices)
-    x, _, z = compute_normal(vertices)
-    angle = np.arctan2(-x, -z)
-
-    size_x, size_y, _ = mesh.bounding_box.extents
-    scale_x = width / size_x
-    scale_y = height / size_y
-    scale_z = (scale_x + scale_y) / 2
-    mesh.vertices *= np.array([scale_x, scale_y, scale_z])
-    mesh.export(str(Path(visual_path) / f"{building_name}-{wall_idx}.glb"))
-
-    transform = trimesh.transformations.compose_matrix(
-        angles=[0, angle, 0],
-        translate=vertices.mean(axis=0),
-    )
-    mesh.apply_transform(transform)
-    plane.apply_translation([0, 15, 0])
-    return mesh, plane
-
-
 def gen_wall_new(
     wall_idx: int,
     w: float,
     h: float,
-    visual_path: str | Path,
+    visual_path: str | Path | None,
     style_ref: Image.Image | None,
     style_ref_scale: float,
     px_per_meter: float | None = None,
@@ -403,7 +352,7 @@ def place_wall_mesh(
     wall_mesh: trimesh.Trimesh,
     vertices: np.ndarray,
     wall_idx: int,
-    visual_path: str | Path,
+    visual_path: str | Path | None,
     config: GenerationParametersConfig | None = None,
 ) -> trimesh.Trimesh:
     config = config or DEFAULT_GENERATION_CONFIG

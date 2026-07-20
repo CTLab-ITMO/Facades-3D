@@ -324,7 +324,7 @@ def derive_seed(base_seed: int | None, offset: int) -> int | None:
 
 def build_facades(
     wall_sizes: np.ndarray,
-    visual_path: Path,
+    visual_path: Path | None,
     storage_path: Path,
     style_ref: Image.Image | None,
     style_ref_scale: float,
@@ -378,7 +378,7 @@ def build_scene(
     groups_items: GroupItems,
     vertices: list[Vertex],
     labels: np.ndarray,
-    visual_path: Path,
+    visual_path: Path | None,
     storage_path: Path,
     config: GenerationParametersConfig,
     cancel_event: Event | None = None,
@@ -429,7 +429,7 @@ def build_scene(
 
 def generate_facade_scene(
     input_path: str | Path,
-    visual_path: str | Path,
+    visual_path: str | Path | None,
     pixels_per_meter: int,
     style_ref: Image.Image | None,
     config: GenerationParametersConfig | None = None,
@@ -441,8 +441,9 @@ def generate_facade_scene(
         raise ValueError("pixels_per_meter must be positive")
 
     config = config or DEFAULT_GENERATION_CONFIG
-    visual_path = Path(visual_path)
-    visual_path.mkdir(parents=True, exist_ok=True)
+    resolved_visual_path = Path(visual_path) if visual_path is not None else None
+    if resolved_visual_path is not None:
+        resolved_visual_path.mkdir(parents=True, exist_ok=True)
 
     if config.temp_root is not None:
         config.temp_root.mkdir(parents=True, exist_ok=True)
@@ -466,7 +467,7 @@ def generate_facade_scene(
         storage_path = Path(temporary_directory)
         frame_sizes, labels = build_facades(
             wall_sizes,
-            visual_path,
+            resolved_visual_path,
             storage_path,
             style_ref,
             effective_style_ref_scale,
@@ -480,7 +481,7 @@ def generate_facade_scene(
             groups_items,
             vertices,
             labels,
-            visual_path,
+            resolved_visual_path,
             storage_path,
             config,
             cancel_event=cancel_event,
@@ -491,8 +492,17 @@ def generate_facade_scene(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate detailed facade meshes for an OBJ scene.")
-    parser.add_argument("--input-path", type=Path, required=True, help="Input OBJ scene path.")
+    parser = argparse.ArgumentParser(
+        description="Generate detailed facade meshes for an OBJ scene.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "--input-path",
+        type=Path,
+        required=True,
+        help="Input OBJ scene path.",
+    )
     parser.add_argument(
         "--output-filename",
         "--result-path",
@@ -501,12 +511,88 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Output GLB scene path. --result-path is accepted as a legacy alias.",
     )
-    parser.add_argument("--visual-path", type=Path, required=True, help="Directory for intermediate visual outputs.")
-    parser.add_argument("--pixels-per-meter", type=int, required=True, help="Facade texture resolution.")
+    parser.add_argument(
+        "--visual-path",
+        type=Path,
+        default=None,
+        help="Optional directory for intermediate visual outputs. If omitted, intermediate outputs are not written.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=DEFAULT_GENERATION_CONFIG.seed,
+        help="Seed for generation.",
+    )
+    parser.add_argument(
+        "--temp-root",
+        type=Path,
+        default=DEFAULT_GENERATION_CONFIG.temp_root,
+        help="Directory for storing temporary files (wall meshes).",
+    )
 
+    parser.add_argument(
+        "--pixels-per-meter",
+        type=int,
+        required=True,
+        help="Number of pixels per meter when generating facade image. Used to infer resolution of facade image.",
+    )
+    parser.add_argument(
+        "--prompt",
+        default=DEFAULT_GENERATION_CONFIG.prompt,
+        help="Prompt for facade image generation.",
+    )
+    parser.add_argument(
+        "--negative-prompt",
+        default=DEFAULT_GENERATION_CONFIG.negative_prompt,
+        help="Negative prompt for facade image generation.",
+    )
+    parser.add_argument(
+        "--diffusion-steps",
+        type=int,
+        default=DEFAULT_GENERATION_CONFIG.diffusion_steps,
+        help="Diffusion steps for facade image generation.",
+    )
+    parser.add_argument(
+        "--guidance-scale",
+        type=float,
+        default=DEFAULT_GENERATION_CONFIG.guidance_scale,
+        help="Diffusion guidance scale for facade image generation.",
+    )
+    parser.add_argument(
+        "--cross-attention-scale",
+        type=float,
+        default=DEFAULT_GENERATION_CONFIG.cross_attention_scale,
+        help="Cross-attention scale (LoRA) for facade image generation.",
+    )
+    parser.add_argument(
+        "--controlnet-conditioning-scale",
+        type=float,
+        default=DEFAULT_GENERATION_CONFIG.controlnet_conditioning_scale,
+        help="ControlNet conditioning scale for facade image generation.",
+    )
+    parser.add_argument(
+        "--control-guidance-start",
+        type=float,
+        default=DEFAULT_GENERATION_CONFIG.control_guidance_start,
+        help="ControlNet guidance start for facade image generation.",
+    )
+    parser.add_argument(
+        "--control-guidance-end",
+        type=float,
+        default=DEFAULT_GENERATION_CONFIG.control_guidance_end,
+        help="ControlNet guidance end for facade image generation.",
+    )
     style_group = parser.add_mutually_exclusive_group(required=True)
-    style_group.add_argument("--style-ref-path", type=Path, help="Style-reference image path.")
-    style_group.add_argument("--no-style-ref", action="store_true", help="Disable style-reference conditioning.")
+    style_group.add_argument(
+        "--style-ref-path",
+        type=Path,
+        help="Style-reference image path.",
+    )
+    style_group.add_argument(
+        "--no-style-ref",
+        action="store_true",
+        help="Disable style-reference conditioning.",
+    )
     parser.add_argument(
         "--style-ref-scale",
         type=float,
@@ -514,47 +600,58 @@ def parse_args() -> argparse.Namespace:
         help="IP-Adapter scale when style reference is enabled.",
     )
 
-    parser.add_argument("--cluster-count", type=int, required=True)
+    parser.add_argument(
+        "--cluster-count",
+        type=int,
+        required=True,
+        help="Number of different wall meshes to generate.",
+    )
     parser.add_argument(
         "--max-wall-aspect-ratio",
         type=float,
         default=DEFAULT_GENERATION_CONFIG.max_wall_aspect_ratio,
         help="Split vertical quad faces so every resulting wall is narrower than this width/height ratio.",
     )
-    parser.add_argument("--temp-root", type=Path, default=DEFAULT_GENERATION_CONFIG.temp_root)
-    parser.add_argument("--seed", type=int, default=DEFAULT_GENERATION_CONFIG.seed)
-    parser.add_argument("--prompt", default=DEFAULT_GENERATION_CONFIG.prompt)
-    parser.add_argument("--negative-prompt", default=DEFAULT_GENERATION_CONFIG.negative_prompt)
-    parser.add_argument("--diffusion-steps", type=int, default=DEFAULT_GENERATION_CONFIG.diffusion_steps)
-    parser.add_argument("--guidance-scale", type=float, default=DEFAULT_GENERATION_CONFIG.guidance_scale)
     parser.add_argument(
-        "--controlnet-conditioning-scale",
-        type=float,
-        default=DEFAULT_GENERATION_CONFIG.controlnet_conditioning_scale,
-    )
-    parser.add_argument("--control-guidance-start", type=float, default=DEFAULT_GENERATION_CONFIG.control_guidance_start)
-    parser.add_argument("--control-guidance-end", type=float, default=DEFAULT_GENERATION_CONFIG.control_guidance_end)
-    parser.add_argument("--cross-attention-scale", type=float, default=DEFAULT_GENERATION_CONFIG.cross_attention_scale)
-    parser.add_argument(
-        "--sparse-structure-steps",
+        "--slat-steps",
         type=int,
-        default=DEFAULT_GENERATION_CONFIG.sparse_structure_steps,
+        default=DEFAULT_GENERATION_CONFIG.slat_steps,
+        help="SLAT generation steps for TRELLIS.",
     )
     parser.add_argument(
-        "--sparse-structure-cfg-strength",
+        "--slat-cfg-strength",
         type=float,
-        default=DEFAULT_GENERATION_CONFIG.sparse_structure_cfg_strength,
+        default=DEFAULT_GENERATION_CONFIG.slat_cfg_strength,
+        help="SLAT generation CFG strength for TRELLIS.",
     )
-    parser.add_argument("--slat-steps", type=int, default=DEFAULT_GENERATION_CONFIG.slat_steps)
-    parser.add_argument("--slat-cfg-strength", type=float, default=DEFAULT_GENERATION_CONFIG.slat_cfg_strength)
-    parser.add_argument("--trellis-mode", default=DEFAULT_GENERATION_CONFIG.trellis_mode)
-    parser.add_argument("--mesh-simplify", type=float, default=DEFAULT_GENERATION_CONFIG.mesh_simplify)
-    parser.add_argument("--texture-size", type=int, default=DEFAULT_GENERATION_CONFIG.texture_size)
-    parser.add_argument("--border-size", type=int, default=DEFAULT_GENERATION_CONFIG.border_size)
+    parser.add_argument(
+        "--border-size",
+        type=int,
+        default=DEFAULT_GENERATION_CONFIG.border_size,
+        help="Border size for input image for TRELLIS.",
+    )
+    parser.add_argument(
+        "--trellis-mode",
+        default=DEFAULT_GENERATION_CONFIG.trellis_mode,
+        help="Generation mode for TRELLIS.",
+    )
+    parser.add_argument(
+        "--mesh-simplify",
+        type=float,
+        default=DEFAULT_GENERATION_CONFIG.mesh_simplify,
+        help="Mesh postprocessing simplification (ratio of vertices to remove).",
+    )
+    parser.add_argument(
+        "--texture-size",
+        type=int,
+        default=DEFAULT_GENERATION_CONFIG.texture_size,
+        help="Mesh texture size. Must be a power of two.",
+    )
     parser.add_argument(
         "--texture-brightness-factor",
         type=float,
         default=DEFAULT_GENERATION_CONFIG.texture_brightness_factor,
+        help="After wall mesh is generated, its texture channel values are multiplied by this number.",
     )
     parser.add_argument(
         "--texture-postprocess-shrink-px",
@@ -562,7 +659,13 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_GENERATION_CONFIG.texture_postprocess_shrink_px,
         help="Shrink each generated texture by this many pixels per dimension before atlas packing.",
     )
-    parser.add_argument("--depth-scale-reference", type=float, default=DEFAULT_GENERATION_CONFIG.depth_scale_reference)
+    parser.add_argument(
+        "--depth-scale-reference",
+        type=float,
+        default=DEFAULT_GENERATION_CONFIG.depth_scale_reference,
+        help="Used to control balconies' depth.",
+    )
+
     return parser.parse_args()
 
 
@@ -583,8 +686,6 @@ def create_generation_config(args: argparse.Namespace) -> GenerationParametersCo
         control_guidance_start=args.control_guidance_start,
         control_guidance_end=args.control_guidance_end,
         cross_attention_scale=args.cross_attention_scale,
-        sparse_structure_steps=args.sparse_structure_steps,
-        sparse_structure_cfg_strength=args.sparse_structure_cfg_strength,
         slat_steps=args.slat_steps,
         slat_cfg_strength=args.slat_cfg_strength,
         trellis_mode=args.trellis_mode,

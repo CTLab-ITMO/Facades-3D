@@ -31,6 +31,7 @@ from fastapi.responses import Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from default_configs import DEFAULT_GENERATION_CONFIG, GenerationParametersConfig
 from gen_facades import generate_facade_scene
@@ -470,6 +471,48 @@ async def _monitor_http_disconnect(
             cancellation.cancel("HTTP client disconnected", origin="connection_drop")
             return
         await asyncio.sleep(HTTP_DISCONNECT_POLL_INTERVAL_SECONDS)
+
+
+class HttpGenerationAcceptanceLoggingMiddleware:
+    """Log accepted REST generation requests without wrapping their receive channel.
+
+    FastAPI's ``@app.middleware("http")`` uses ``BaseHTTPMiddleware``. That
+    wrapper creates an intermediate request/receive stream, which can prevent
+    ``Request.is_disconnected()`` in the endpoint from observing the original
+    ``http.disconnect`` ASGI message. A pure ASGI middleware forwards the exact
+    same ``receive`` callable and therefore does not interfere with disconnect
+    cancellation.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(
+        self,
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+    ) -> None:
+        if (
+            scope["type"] == "http"
+            and scope.get("method") == "POST"
+            and scope.get("path") == "/generate"
+        ):
+            client = scope.get("client")
+            client_address = (
+                f"{client[0]}:{client[1]}"
+                if client is not None
+                else "unknown"
+            )
+            logger.info(
+                'HTTP generation request accepted from %s: "POST /generate"',
+                client_address,
+            )
+
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(HttpGenerationAcceptanceLoggingMiddleware)
 
 
 @app.get("/health")

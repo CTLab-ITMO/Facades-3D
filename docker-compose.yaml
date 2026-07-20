@@ -1,6 +1,6 @@
 services:
-  custom-v100:
-    image: custom-v100:py310-cu126
+  facades-3d-generation-server:
+    image: facades-3d-generation-server
     build:
       context: .
       dockerfile: Dockerfile

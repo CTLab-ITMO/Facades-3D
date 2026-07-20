@@ -156,3 +156,6 @@ PY
 
 rm -rf "${WHEEL_DIR}"
 
+echo
+echo "Dependency installation completed successfully."
+

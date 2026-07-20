@@ -163,4 +163,3 @@ class TrellisImageToFacadePipeline(TrellisImageTo3DPipeline):
         with self.inject_sampler_multi_image('slat_sampler', len(images), slat_steps, mode=mode):
             slat = self.sample_slat(cond, coords, slat_sampler_params)
         return self.decode_slat(slat, formats)
-
