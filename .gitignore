@@ -23,4 +23,6 @@ logs/
 *.pth
 *.ckpt
 
+*.glb
+
 src/trellis/**
