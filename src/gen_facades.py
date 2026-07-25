@@ -88,7 +88,7 @@ def parse_obj_groups(
 ) -> tuple[list[Vertex], FacesByGroup]:
     vertices: list[Vertex] = []
     groups: FacesByGroup = {}
-    current_group: str | None = None
+    current_group: str = "building"
 
     with open(path, "r", encoding="utf-8") as file:
         lines = file.readlines()
@@ -106,16 +106,15 @@ def parse_obj_groups(
             continue
 
         if line.startswith("o "):
+            if gen_groups:
+                continue
+
             current_group = line.split(maxsplit=1)[1]
             groups.setdefault(current_group, [])
             continue
 
         if not line.startswith("f "):
             continue
-
-        if current_group is None:
-            current_group = "default"
-            groups.setdefault(current_group, [])
 
         indices = [int(part.split("/")[0]) - 1 for part in line.split()[1:]]
         if gen_groups:
@@ -451,7 +450,7 @@ def generate_facade_scene(
     effective_style_ref_scale = config.style_ref_scale if style_ref is not None else 0.0
     vertices, groups = parse_obj_groups(
         input_path,
-        gen_groups=True,
+        gen_groups=False,
         max_wall_aspect_ratio=config.max_wall_aspect_ratio,
     )
     raise_if_cancelled(cancel_event)
