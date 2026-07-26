@@ -2,11 +2,11 @@
 
 This is an app that generates 3D models of residential buildings with detailed exteriors that fit the provided mass model. The below image shows transition from input mass model to generated result.
 
-![itmo1-transition](https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/itmo1-transition.webp)
+<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/itmo1-transition.webp" alt="itmo1-transition" width="50%">
 
 This app also accepts text prompt and style reference image for generation. The above image was generated with [this](./example_data/style1.png) reference image. Example generated with [this](./example_data/style2.png) reference image is listed below.
 
-![itmo2-transition](https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/itmo2-transition.webp)
+<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/itmo2-transition.webp" alt="itmo2-transition" width="50%">
 
 More visual results can be seen in [visuals.md](./visuals.md).
 
@@ -268,4 +268,4 @@ This project relies on
   - mip-splatting / [License](https://github.com/autonomousvision/mip-splatting/blob/main/LICENSE.md);
   - nvdiffrast / [License](https://github.com/NVlabs/nvdiffrast/blob/main/LICENSE.txt);
 
-![low-city](https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/low-city.webp)
+<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/low-city.webp" alt="low-city" width="100%">
