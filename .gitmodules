@@ -1,0 +1,9 @@
+[submodule "third_party/nvdiffrast"]
+	path = third_party/nvdiffrast
+	url = https://github.com/NVlabs/nvdiffrast.git
+[submodule "third_party/diffoctreerast"]
+	path = third_party/diffoctreerast
+	url = https://github.com/JeffreyXiang/diffoctreerast.git
+[submodule "third_party/mip-splatting"]
+	path = third_party/mip-splatting
+	url = https://github.com/autonomousvision/mip-splatting.git
