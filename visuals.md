@@ -20,22 +20,34 @@ Input scene: [`parallelepiped_grid`](./example_data/parallelepiped_grid.obj)
 
 Input scene: [`hexagon`](./example_data/hexagon.obj)
 
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-hexagon1.webp" alt="high-hexagon1" width="48%">
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-hexagon2.webp" alt="high-hexagon2" width="48%">
+<table>
+<tr>
+<td><img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-hexagon1.webp" alt="high-hexagon1" width="100%"></td>
+<td><img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-hexagon2.webp" alt="high-hexagon2" width="100%"></td>
+</tr>
+</table>
 
 ---
 
 Input scene: [`small_scene`](./example_data/small_scene.obj)
 
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-ss1.webp" alt="high-small-scene1" width="48%">
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-ss2.webp" alt="high-small-scene2" width="48%">
+<table>
+<tr>
+<td><img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-ss1.webp" alt="high-small-scene1" width="100%"></td>
+<td><img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-ss2.webp" alt="high-small-scene2" width="100%"></td>
+</tr>
+</table>
 
 ---
 
 Input scene: [`tower`](./example_data/tower.obj)
 
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-tower1.webp" alt="high-tower1" width="25%">
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-tower2.webp" alt="high-tower2" width="25%">
+<table>
+<tr>
+<td><img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-tower1.webp" alt="high-tower1" width="100%"></td>
+<td><img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-tower2.webp" alt="high-tower2" width="100%"></td>
+</tr>
+</table>
 
 ---
 
