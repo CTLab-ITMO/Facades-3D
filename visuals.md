@@ -53,17 +53,17 @@ Input scene: [`tower`](./example_data/tower.obj)
 
 Input scene: [`itmo`](./example_data/itmo.obj)
 
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-itmo1.webp" alt="high-itmo1" width="75%">
+<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-itmo1.webp" alt="high-itmo1" width="100%">
 
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-itmo2.webp" alt="high-itmo2" width="75%">
+<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-itmo2.webp" alt="high-itmo2" width="100%">
 
 ---
 
 Input scene: [`etofhl`](./example_data/etofhl.obj)
 
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-etofhl1.webp" alt="high-etofhl1" width="75%">
+<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-etofhl1.webp" alt="high-etofhl1" width="100%">
 
-<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-etofhl2.webp" alt="high-etofhl2" width="75%">
+<img src="https://github.com/CTLab-ITMO/Facades-3D/releases/download/webp-files/high-etofhl2.webp" alt="high-etofhl2" width="100%">
 
 ---
 
