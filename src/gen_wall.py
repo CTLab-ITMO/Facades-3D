@@ -52,11 +52,6 @@ if not os.getenv("SKIP_MODEL_LOAD"):
         weight_name=MODEL_CONFIG.lora_path.name,
         adapter_name=MODEL_CONFIG.lora_adapter_name,
     )
-    pipe.load_ip_adapter(
-        MODEL_CONFIG.ip_adapter_repository,
-        subfolder=MODEL_CONFIG.ip_adapter_subfolder,
-        weight_name=MODEL_CONFIG.ip_adapter_weight_name,
-    )
 
 if not os.getenv("SKIP_MODEL_LOAD"):
     from trellis_image_to_facade import TrellisImageToFacadePipeline
@@ -73,7 +68,7 @@ def _cleanup_cuda_state() -> None:
 
 
 def release_generation_memory() -> None:
-    if SKIP_MODEL_LOAD:
+    if not os.getenv("SKIP_MODEL_LOAD"):
         return
 
     try:
@@ -85,6 +80,31 @@ def release_generation_memory() -> None:
                 pipeline.cpu()
         finally:
             _cleanup_cuda_state()
+
+
+def is_ip_adapter_loaded(pipe):
+    return (
+        getattr(pipe.unet, "encoder_hid_proj", None) is not None
+        and getattr(pipe.unet.config, "encoder_hid_dim_type", None) == "ip_image_proj"
+    )
+
+
+def enable_ip_adapter(pipe):
+    if is_ip_adapter_loaded(pipe):
+        return
+
+    pipe.load_ip_adapter(
+        MODEL_CONFIG.ip_adapter_repository,
+        subfolder=MODEL_CONFIG.ip_adapter_subfolder,
+        weight_name=MODEL_CONFIG.ip_adapter_weight_name,
+    )
+
+
+def disable_ip_adapter(pipe):
+    if not is_ip_adapter_loaded(pipe):
+        return
+
+    pipe.unload_ip_adapter()
 
 
 def compute_normal(face_points: np.ndarray) -> np.ndarray:
@@ -142,7 +162,12 @@ def gen_wall_image(
 
     semantic_map = recover_balconies(semantic_map)
     use_style_reference = style_ref is not None and style_ref_scale > 0.0
-    pipe.set_ip_adapter_scale(style_ref_scale if use_style_reference else 0.0)
+
+    if use_style_reference:
+        enable_ip_adapter(pipe)
+        pipe.set_ip_adapter_scale(style_ref_scale)
+    else:
+        disable_ip_adapter(pipe)
 
     try:
         pipe.to("cuda")
